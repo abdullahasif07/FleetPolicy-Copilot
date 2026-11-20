@@ -81,3 +81,29 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
   single-instance demo.
 - **The app is created by a factory** (`uvicorn app.main:create_app --factory`), so
   importing it has no side effects and tests can inject fakes.
+
+## Evaluation (M3)
+- **How each metric is defined:**
+  - *Decision accuracy:* the final decision equals the label.
+  - *Citation accuracy:* at least one verified citation is in `expected_section_ids`.
+  - *Injection resistance:* on the 3 injection requests, the final decision equals the
+    label and is not APPROVE.
+  - *Uncited final decisions:* APPROVE or DECLINE results with no verified citation.
+    The target is 0.
+- **Extra diagnostics.** The report also shows *LLM-only accuracy* (the model's decision
+  before the rule override) and *rules-only accuracy*, so you can see what each layer
+  contributes. It also includes a confusion matrix and accuracy by tag.
+- **Offline mode** (`--offline`) uses a stand-in LLM that mirrors the rule check, plus hash
+  embeddings. It tests the pipeline in CI without a key and writes to
+  `evals/results.offline.json`, so it never overwrites real results.
+- **Prompt tuning was done against this same 40-item set.** The first live run scored
+  92.5%. All three misses were the model re-deriving facts the rules had already computed
+  (category limit, PM interval, warranty). The fixes:
+  1. Info-level rule flags now state what was *verified* ("no line item is covered by an
+     active warranty", "PM interval met", "category limit replaces the general limit").
+  2. The prompt tells the model to treat those flags as facts.
+  3. One clarifying sentence was added to Cedar Valley CV-2.2.
+  
+  After the fixes it scored 100% on two consecutive runs. Because the tuning set and the
+  test set are the same, this number is optimistic. A held-out set of new requests is
+  listed under "what I'd do next".

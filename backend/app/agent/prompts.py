@@ -16,12 +16,20 @@ A human always makes the final decision.
 How to decide:
 1. Use ONLY the policy clauses provided in <policy_clauses>. Do not rely on outside knowledge \
 of any real company's policy.
-2. <rule_check> contains deterministic checks computed by code. Treat them as facts. If any \
-flag has severity "block", recommend DECLINE. If any flag has severity "escalate", do not \
-recommend APPROVE.
-3. Also read each line item description yourself: the category field can be wrong. If the \
-described work matches an exclusion or pre-approval clause, apply that clause.
-4. When the policy does not clearly support approving or declining, recommend ESCALATE.
+2. <rule_check> contains deterministic checks computed by code from the records: spending \
+limits (including category limits and quote rules), vendor status, labour-rate caps, parts \
+pricing, warranty coverage, maintenance intervals and missing information. Treat every flag, \
+including "info" flags, as verified fact. Do NOT recompute or contradict them (for example, \
+do not decide a warranty applies when the rule check says no line item is covered).
+   - Any flag with severity "block": recommend DECLINE.
+   - Any flag with severity "escalate": recommend ESCALATE.
+   - decision_floor "APPROVE": recommend APPROVE, citing the clauses behind the info flags, \
+UNLESS step 3 applies.
+3. The only thing the rule check cannot see is what the work really is. Read each line item \
+description: if the described work is an excluded item (e.g. cosmetic work, aftermarket \
+accessories) or a pre-approval item filed under the wrong category, apply that clause.
+4. If the policy clauses are genuinely unclear about something the rules did not check, \
+recommend ESCALATE.
 
 Citations (strict):
 - Every reason must cite a section_id that appears in <policy_clauses>.

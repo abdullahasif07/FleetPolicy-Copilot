@@ -1,17 +1,65 @@
 {
   "shops": [
-    {"shop_id": "S01", "name": "Ridgeline Fleet Service", "city": "Maple Ford"},
-    {"shop_id": "S02", "name": "Ironwood Truck & Diesel", "city": "Port Alder"},
-    {"shop_id": "S03", "name": "Bluegate Tire & Brake", "city": "Cedar Valley"},
-    {"shop_id": "S04", "name": "Quarry Road Garage", "city": "Port Alder"},
-    {"shop_id": "S05", "name": "Lakeshore EV Works", "city": "Summit Bay"},
-    {"shop_id": "S06", "name": "Pinecrest Commercial Repair", "city": "Maple Ford"},
-    {"shop_id": "S07", "name": "Metro Brake & Alignment", "city": "Granton"},
-    {"shop_id": "S08", "name": "Copperline Collision", "city": "Cedar Valley"},
-    {"shop_id": "S09", "name": "Westfield Mobile Mechanics", "city": "Granton"},
-    {"shop_id": "S10", "name": "Riverside Reefer Repair", "city": "Port Alder"},
-    {"shop_id": "S11", "name": "Fastlane Quick Lube", "city": "Granton"},
-    {"shop_id": "S12", "name": "Granite Peak Auto", "city": "Summit Bay"}
+    {
+      "shop_id": "S01",
+      "name": "Ridgeline Fleet Service",
+      "city": "Maple Ford"
+    },
+    {
+      "shop_id": "S02",
+      "name": "Ironwood Truck & Diesel",
+      "city": "Port Alder"
+    },
+    {
+      "shop_id": "S03",
+      "name": "Bluegate Tire & Brake",
+      "city": "Cedar Valley"
+    },
+    {
+      "shop_id": "S04",
+      "name": "Quarry Road Garage",
+      "city": "Port Alder"
+    },
+    {
+      "shop_id": "S05",
+      "name": "Lakeshore EV Works",
+      "city": "Summit Bay"
+    },
+    {
+      "shop_id": "S06",
+      "name": "Pinecrest Commercial Repair",
+      "city": "Maple Ford"
+    },
+    {
+      "shop_id": "S07",
+      "name": "Metro Brake & Alignment",
+      "city": "Granton"
+    },
+    {
+      "shop_id": "S08",
+      "name": "Copperline Collision",
+      "city": "Cedar Valley"
+    },
+    {
+      "shop_id": "S09",
+      "name": "Westfield Mobile Mechanics",
+      "city": "Granton"
+    },
+    {
+      "shop_id": "S10",
+      "name": "Riverside Reefer Repair",
+      "city": "Port Alder"
+    },
+    {
+      "shop_id": "S11",
+      "name": "Fastlane Quick Lube",
+      "city": "Granton"
+    },
+    {
+      "shop_id": "S12",
+      "name": "Granite Peak Auto",
+      "city": "Summit Bay"
+    }
   ],
   "clients": [
     {
@@ -24,13 +72,25 @@
       "quote_threshold": null,
       "quotes_required": 0,
       "limit_with_quotes": null,
-      "approved_vendors": ["S01", "S02", "S06", "S07"],
+      "approved_vendors": [
+        "S01",
+        "S02",
+        "S06",
+        "S07"
+      ],
       "non_approved_vendor_action": "block",
       "labor_rate_cap": 135.0,
       "labor_cap_action": "block",
-      "pre_approval_categories": ["engine", "transmission", "body"],
+      "pre_approval_categories": [
+        "engine",
+        "transmission",
+        "body"
+      ],
       "always_escalate_categories": [],
-      "excluded_categories": ["cosmetic", "accessories"],
+      "excluded_categories": [
+        "cosmetic",
+        "accessories"
+      ],
       "pm_interval_miles": 10000,
       "pm_min_miles": 9000,
       "parts_markup_review_pct": 25.0,
@@ -46,7 +106,8 @@
         "pm_early": "NW-7.2",
         "exclusion": "NW-8.1",
         "missing_info": "NW-9.1",
-        "quotes": "NW-2.2"
+        "quotes": "NW-2.2",
+        "pm_interval": "NW-7.1"
       }
     },
     {
@@ -55,17 +116,34 @@
       "policy_file": "policies/cedar_valley.md",
       "summary": "Safety-first: brake, tire and steering work approved up to $1,500; aerial and major repairs need pre-approval.",
       "auto_approve_limit": 1000.0,
-      "category_limits": {"brakes": 1500.0, "tires": 1500.0, "steering": 1500.0},
+      "category_limits": {
+        "brakes": 1500.0,
+        "tires": 1500.0,
+        "steering": 1500.0
+      },
       "quote_threshold": null,
       "quotes_required": 0,
       "limit_with_quotes": null,
-      "approved_vendors": ["S01", "S03", "S07", "S08", "S09"],
+      "approved_vendors": [
+        "S01",
+        "S03",
+        "S07",
+        "S08",
+        "S09"
+      ],
       "non_approved_vendor_action": "escalate",
       "labor_rate_cap": 150.0,
       "labor_cap_action": "escalate",
-      "pre_approval_categories": ["engine", "transmission", "aerial_hydraulics"],
+      "pre_approval_categories": [
+        "engine",
+        "transmission",
+        "aerial_hydraulics"
+      ],
       "always_escalate_categories": [],
-      "excluded_categories": ["cosmetic", "accessories"],
+      "excluded_categories": [
+        "cosmetic",
+        "accessories"
+      ],
       "pm_interval_miles": 7500,
       "pm_min_miles": null,
       "parts_markup_review_pct": null,
@@ -82,7 +160,8 @@
         "pm_early": "CV-7.1",
         "exclusion": "CV-8.1",
         "missing_info": "CV-9.1",
-        "quotes": "CV-2.1"
+        "quotes": "CV-2.1",
+        "pm_interval": "CV-7.1"
       }
     },
     {
@@ -95,13 +174,25 @@
       "quote_threshold": 750.0,
       "quotes_required": 2,
       "limit_with_quotes": 2500.0,
-      "approved_vendors": ["S02", "S04", "S06", "S10"],
+      "approved_vendors": [
+        "S02",
+        "S04",
+        "S06",
+        "S10"
+      ],
       "non_approved_vendor_action": "escalate",
       "labor_rate_cap": 125.0,
       "labor_cap_action": "block",
-      "pre_approval_categories": ["reefer", "engine", "transmission"],
+      "pre_approval_categories": [
+        "reefer",
+        "engine",
+        "transmission"
+      ],
       "always_escalate_categories": [],
-      "excluded_categories": ["cosmetic", "accessories"],
+      "excluded_categories": [
+        "cosmetic",
+        "accessories"
+      ],
       "pm_interval_miles": 15000,
       "pm_min_miles": 13500,
       "parts_markup_review_pct": 20.0,
@@ -117,7 +208,8 @@
         "pm_early": "HF-7.2",
         "exclusion": "HF-8.1",
         "missing_info": "HF-9.1",
-        "quotes": "HF-2.2"
+        "quotes": "HF-2.2",
+        "pm_interval": "HF-7.1"
       }
     },
     {
@@ -130,13 +222,25 @@
       "quote_threshold": null,
       "quotes_required": 0,
       "limit_with_quotes": null,
-      "approved_vendors": ["S01", "S05", "S09"],
+      "approved_vendors": [
+        "S01",
+        "S05",
+        "S09"
+      ],
       "non_approved_vendor_action": "escalate",
       "labor_rate_cap": 165.0,
       "labor_cap_action": "escalate",
-      "pre_approval_categories": ["electric_drive", "body"],
-      "always_escalate_categories": ["battery_hv"],
-      "excluded_categories": ["cosmetic", "accessories"],
+      "pre_approval_categories": [
+        "electric_drive",
+        "body"
+      ],
+      "always_escalate_categories": [
+        "battery_hv"
+      ],
+      "excluded_categories": [
+        "cosmetic",
+        "accessories"
+      ],
       "pm_interval_miles": 12000,
       "pm_min_miles": 10000,
       "parts_markup_review_pct": null,
@@ -153,7 +257,8 @@
         "pm_early": "SH-7.2",
         "exclusion": "SH-8.1",
         "missing_info": "SH-9.1",
-        "quotes": "SH-2.2"
+        "quotes": "SH-2.2",
+        "pm_interval": "SH-7.1"
       }
     }
   ]

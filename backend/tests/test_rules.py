@@ -21,8 +21,9 @@ def test_clean_request_under_limit_is_approvable() -> None:
     r = run_rules(make_request())
     assert r.decision_floor is Decision.APPROVE
     assert r.computed_total == 272.5
-    assert codes(r) == {RuleCode.WITHIN_LIMIT}
-    assert r.flags[0].section_id == "NW-2.1"
+    assert codes(r) == {RuleCode.WITHIN_LIMIT, RuleCode.WARRANTY}
+    assert {f.severity for f in r.flags} == {Severity.INFO}
+    assert any(f.section_id == "NW-2.1" for f in r.flags)
 
 
 def test_months_between_handles_day_of_month() -> None:
@@ -182,6 +183,14 @@ def test_early_pm_blocks_and_on_time_pm_passes(item: Any) -> None:
     on_time = make_request(vehicle_id="V-NW-01", odometer=90500 + 9000,
                            line_items=[item(category="preventive_maintenance")])
     assert run_rules(on_time).decision_floor is Decision.APPROVE
+
+
+def test_on_time_pm_records_info_flag(item: Any) -> None:
+    req = make_request(vehicle_id="V-NW-01", odometer=90500 + 9500,
+                       line_items=[item(category="preventive_maintenance")])
+    r = run_rules(req)
+    assert RuleCode.PM_INTERVAL in codes(r, Severity.INFO)
+    assert any(f.section_id == "NW-7.1" for f in r.flags)
 
 
 def test_cedar_valley_allows_early_pm(item: Any) -> None:

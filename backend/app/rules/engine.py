@@ -199,13 +199,27 @@ def evaluate(
                      f"Line {i + 1} ({li.category}) is covered by the active {covering[0]} "
                      f"warranty; submit as a warranty claim.", key, i)
 
-        if policy.pm_min_miles is not None and vehicle.last_pm_mileage is not None:
+        if not warranty_opportunity and request.line_items:
+            active = ", ".join(coverage) or "none"
+            flag(RuleCode.WARRANTY, Severity.INFO,
+                 f"No line item is covered by an active warranty (active coverage: {active}; "
+                 f"wear items and maintenance are never covered).", "warranty")
+
+        has_pm = any(li.category is Category.PREVENTIVE_MAINTENANCE for li in request.line_items)
+        if has_pm and vehicle.last_pm_mileage is not None:
             since = request.odometer - vehicle.last_pm_mileage
-            for i, li in enumerate(request.line_items):
-                if li.category is Category.PREVENTIVE_MAINTENANCE and since < policy.pm_min_miles:
-                    flag(RuleCode.PM_EARLY, Severity.BLOCK,
-                         f"Only {since:,} miles since last PM; minimum is "
-                         f"{policy.pm_min_miles:,}.", "pm_early", i)
+            pm_line = next(i for i, li in enumerate(request.line_items)
+                           if li.category is Category.PREVENTIVE_MAINTENANCE)
+            if policy.pm_min_miles is not None and since < policy.pm_min_miles:
+                flag(RuleCode.PM_EARLY, Severity.BLOCK,
+                     f"Only {since:,} miles since last PM; minimum is "
+                     f"{policy.pm_min_miles:,}.", "pm_early", pm_line)
+            else:
+                minimum = (f"minimum {policy.pm_min_miles:,}" if policy.pm_min_miles is not None
+                           else "early service allowed")
+                flag(RuleCode.PM_INTERVAL, Severity.INFO,
+                     f"{since:,} miles since last PM ({minimum}); interval requirement met.",
+                     "pm_interval", pm_line)
 
     # 5. Spending authority (needs a computable total) ----------------------------------
     total = request.total
@@ -239,6 +253,12 @@ def evaluate(
                 flag(RuleCode.SPENDING_LIMIT, Severity.ESCALATE,
                      f"Total {_money(total)} exceeds the {_money(limit)} approval limit.",
                      over_key)
+            elif use_category:
+                flag(RuleCode.WITHIN_LIMIT, Severity.INFO,
+                     f"Total {_money(total)} is within the {_money(limit)} category limit for "
+                     f"{', '.join(sorted(str(c) for c in cats))} work. This category limit "
+                     f"replaces the general {_money(policy.auto_approve_limit)} limit, so no "
+                     f"escalation is needed for cost.", within_key)
             else:
                 flag(RuleCode.WITHIN_LIMIT, Severity.INFO,
                      f"Total {_money(total)} is within the {_money(limit)} approval limit.",

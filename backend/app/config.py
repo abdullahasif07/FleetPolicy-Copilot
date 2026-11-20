@@ -26,7 +26,12 @@ MODEL_PRICING: dict[str, tuple[float, float]] = {
 
 
 def estimate_cost(model: str, tokens_in: int, tokens_out: int) -> float:
-    price_in, price_out = MODEL_PRICING.get(model, (0.40, 1.60))
+    """USD estimate. Dated variants (e.g. gpt-4.1-mini-2025-04-14) match their base name;
+    unknown models (fakes, stand-ins) cost 0."""
+    matches = [k for k in MODEL_PRICING if model == k or model.startswith(k + "-")]
+    if not matches:
+        return 0.0
+    price_in, price_out = MODEL_PRICING[max(matches, key=len)]
     return (tokens_in * price_in + tokens_out * price_out) / 1_000_000
 
 

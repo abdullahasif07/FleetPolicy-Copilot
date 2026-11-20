@@ -56,6 +56,7 @@ class RuleCode(StrEnum):
     EXCLUSION = "EXCLUSION"
     WARRANTY = "WARRANTY"
     PM_EARLY = "PM_EARLY"
+    PM_INTERVAL = "PM_INTERVAL"
 
 
 # --- Requests -----------------------------------------------------------------

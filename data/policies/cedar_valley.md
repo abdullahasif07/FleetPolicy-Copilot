@@ -22,7 +22,7 @@ Repair requests with a total of $1,000.00 or less may be approved by a maintenan
 
 ### CV-2.2 Safety-critical repairs
 
-Brake, tire and steering work is safety-critical. Safety-critical repair requests are approved up to a total of $1,500.00 without further review. Safety-critical work above $1,500.00 must be escalated to the fleet supervisor, who will respond within four business hours.
+Brake, tire and steering work is safety-critical. Safety-critical repair requests are approved up to a total of $1,500.00 without further review. For safety-critical work, this $1,500.00 limit replaces the general limit in CV-2.1. Safety-critical work above $1,500.00 must be escalated to the fleet supervisor, who will respond within four business hours.
 
 ### CV-2.3 No delay for safety
 
