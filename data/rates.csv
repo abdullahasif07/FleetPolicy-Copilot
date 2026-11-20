@@ -1,0 +1,35 @@
+item_type,code,description,category,unit,ref_low,ref_high
+labor,L-GEN,General mechanical labour,general,hour,110,135
+labor,L-DSL,Diesel / medium-duty labour,diesel,hour,120,150
+labor,L-EVHV,High-voltage certified EV labour,ev_hv,hour,145,175
+labor,L-BODY,Body and collision labour,body,hour,90,120
+labor,L-REEF,Refrigeration unit technician labour,reefer,hour,115,140
+part,P-BRK-PAD-LD,Brake pad set (light duty axle),brakes,each,70,85
+part,P-BRK-PAD-MD,Brake pad / shoe set (medium duty axle),brakes,each,180,210
+part,P-BRK-ROT-LD,Brake rotor (light duty),brakes,each,80,95
+part,P-BRK-ROT-MD,Brake rotor (medium duty),brakes,each,210,240
+part,P-BRK-CHM,Air brake chamber,brakes,each,120,145
+part,P-TIR-LD,Light truck tire,tires,each,180,210
+part,P-TIR-MD,Commercial tire 22.5in,tires,each,380,420
+part,P-TIE,Tie rod end,steering,each,70,85
+part,P-SHK,Shock absorber,suspension,each,100,120
+part,P-OIL-LD,Oil and filter service kit (light duty),preventive_maintenance,each,50,65
+part,P-OIL-MD,Oil and filter service kit (medium duty diesel),preventive_maintenance,each,140,160
+part,P-CAB-FLT,Cabin air filter,preventive_maintenance,each,25,35
+part,P-BAT-12V,12V battery,battery_12v,each,160,190
+part,P-ALT,Alternator,electrical,each,360,420
+part,P-STR,Starter motor,electrical,each,320,380
+part,P-WTR-PMP,Water pump,engine,each,270,310
+part,P-AC-COMP,AC compressor,hvac,each,690,780
+part,P-TRN-SOL,Transmission solenoid pack,transmission,each,460,520
+part,P-GLS,Windshield,glass,each,360,420
+part,P-HYD-HOSE,Aerial hydraulic hose kit,aerial_hydraulics,each,300,340
+part,P-REF-CMP,Reefer compressor,reefer,each,1900,2100
+part,P-REF-BLT,Reefer belt kit,reefer,each,100,120
+part,P-HV-MOD,High-voltage battery module,battery_hv,each,3400,3800
+part,P-HV-COOL,HV battery coolant pump,battery_hv,each,560,640
+part,P-EDU-BRG,Electric drive unit bearing and seal kit,electric_drive,each,850,980
+part,P-WPR,Wiper blade pair,glass,each,25,30
+part,P-LED,LED light bar,accessories,each,220,260
+part,P-RACK,Ladder rack,accessories,each,450,520
+part,P-DECAL,Fleet decal set,cosmetic,each,300,360
