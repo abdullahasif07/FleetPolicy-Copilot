@@ -4,7 +4,16 @@ version = "0.1.0"
 description = "AI assistant that recommends repair-request decisions from client fleet policies (demo, fictional data)."
 requires-python = ">=3.12"
 dependencies = [
+    "chromadb>=1.5.9",
+    "fastapi>=0.165.0",
+    "langgraph>=1.2.24",
+    "langsmith>=0.15.1",
+    "openai>=3.57.0",
     "pydantic>=2.9,<3",
+    "pydantic-settings>=2.16.3",
+    "rank-bm25>=0.2.2",
+    "sqlmodel>=0.0.50",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
@@ -12,6 +21,7 @@ dev = [
     "pytest>=8.3",
     "ruff>=0.7",
     "mypy>=1.13",
+    "httpx>=0.28.1",
 ]
 
 [tool.ruff]
@@ -20,11 +30,16 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]  # intentional unicode; readable word lists
 
 [tool.mypy]
 python_version = "3.12"
 strict = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["rank_bm25.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

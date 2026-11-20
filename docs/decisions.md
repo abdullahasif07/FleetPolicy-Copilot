@@ -41,3 +41,43 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
   `EMBEDDING_MODEL=text-embedding-3-small`. All three are set through env vars.
 - **Python 3.12 via uv**, because the local system Python is 3.14, which ChromaDB doesn't
   fully support yet. Docker also works.
+
+## Retrieval and agent (M2)
+- **Chunking.** One chunk per `### XX-n.n` policy section, tagged with `client_id` and
+  `section_id`. Sections are short, so they aren't split further.
+- **Hybrid search.** BM25 (`rank_bm25`, in memory per client) plus Chroma cosine vector
+  search, merged with reciprocal-rank fusion (k=60), top 6 results. Every search is
+  filtered by `client_id`.
+- **The retrieval query uses structured fields only** (line-item descriptions and
+  categories). Untrusted shop notes never steer retrieval.
+- **Rule-cited sections are pinned into the LLM's context** after `rule_check`, so every
+  rule finding has a clause the LLM and the validator can cite. When an injection is
+  detected, the "vendor notes have no authority" section (`XX-10.1`) is pinned too.
+- **`load_context` "tool call"** is a deterministic lookup (`app/agent/tools.py`), not an
+  LLM function call. The model never decides which records to fetch, so that step stays
+  predictable.
+- **How the AI and rules combine.** Rules DECLINE → DECLINE. Rules ESCALATE → ESCALATE.
+  Rules APPROVE → the LLM's decision, if it carries a verified citation. An uncited
+  APPROVE or DECLINE → ESCALATE ("insufficient evidence"). An uncited ESCALATE is allowed.
+- **Quote verification** is a case- and whitespace-insensitive substring match against the
+  cited chunk, with a minimum of 12 characters.
+- **LLM outage.** After retries with backoff on the primary model and then the fallback
+  model, the graph degrades to a rules-only recommendation. It never approves without the
+  AI's cited evidence.
+- **Injection handling.** Shop notes are wrapped in `<untrusted_shop_notes>`, and `<` and
+  `>` are replaced so a note can't close or spoof the tags. A regex detector flags
+  suspicious notes for the UI. Safety doesn't depend on the detector.
+- **Cost** is estimated from a price table in `app/config.py` (approximate list prices).
+
+## API and storage (M2)
+- **Extra read-only endpoints for the UI:** `GET /clients`, `/policies/{id}`, `/vehicles`,
+  `/shops`, `/health`. Also `POST /demo/reset` for the demo mode. Reset keeps usage rows,
+  so it can't be used to get around the daily spend cap.
+- **Analyze uses SSE by default.** `?stream=false` returns plain JSON for scripts.
+- **One human decision per request.** Recording a decision requires an analysis first
+  (409 otherwise). Overriding the AI requires a reason of at least 5 characters.
+- **Sessions.** The rate limit keys on the `X-Session-ID` header the frontend sends, and
+  falls back to client IP. It's in memory and per process, which is fine for a
+  single-instance demo.
+- **The app is created by a factory** (`uvicorn app.main:create_app --factory`), so
+  importing it has no side effects and tests can inject fakes.
