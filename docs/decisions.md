@@ -107,3 +107,27 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
   After the fixes it scored 100% on two consecutive runs. Because the tuning set and the
   test set are the same, this number is optimistic. A held-out set of new requests is
   listed under "what I'd do next".
+
+## Frontend (M4)
+- **Data fetching happens in the browser with SWR.** The FastAPI backend is a separate
+  service, and the rate limiter keys on a per-browser `X-Session-ID`, so browser fetching
+  is the natural fit. Pages are prerendered shells (Next 16 Cache Components). Components
+  that read URL data (`useSearchParams`, `usePathname`, route params) sit inside
+  `<Suspense>`, as Next 16 requires.
+- **SSE over POST.** `EventSource` only supports GET, so the analyze stream is read with
+  `fetch` and a small SSE parser in `src/lib/api.ts`.
+- **API URL.** `next.config.ts` reads *only* `NEXT_PUBLIC_API_URL` from the root `.env`. It
+  never loads the whole file, which also holds server secrets.
+- **Theme.** A small custom provider plus an inline `<head>` script, following the Next 16
+  "preventing flash" guide. This replaces `next-themes`, which renders a `<script>` from a
+  client component. One accent colour (indigo); green, amber and red are reserved for
+  approve, escalate and decline.
+- **Queue.** Loads all requests once and filters in the browser: 40 rows, instant counts.
+  Filters live in the URL, so going back from a review restores them. The default view is
+  "Needs review" (pending plus analyzed).
+- **Citations** open in a side sheet with the cited sentence highlighted, plus a link to the
+  full policy viewer (`/policies/{client}?section=…&q=…`). The policy viewer was built in
+  M4 because citation links depend on it.
+- **Overrides.** Choosing the AI's recommendation records the decision immediately. Any
+  other choice opens a dialog that requires a reason (at least 5 characters). After a
+  decision, a "Next request" button moves to the next open item.
