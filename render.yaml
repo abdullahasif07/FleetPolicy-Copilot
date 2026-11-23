@@ -1,0 +1,37 @@
+# Render Blueprint for the backend API (config only; not deployed).
+# In Render: New → Blueprint → select this repo. Then set the secret env vars marked sync: false.
+services:
+  - type: web
+    name: fleetpolicy-api
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./backend/Dockerfile
+    plan: starter            # a persistent disk requires a paid plan
+    region: oregon
+    healthCheckPath: /health
+    autoDeploy: false
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false          # set in the Render dashboard; never commit it
+      - key: CORS_ORIGIN
+        sync: false          # e.g. https://fleetpolicy-copilot.vercel.app
+      - key: LLM_MODEL
+        value: gpt-4.1-mini
+      - key: LLM_FALLBACK_MODEL
+        value: gpt-4o-mini
+      - key: EMBEDDING_MODEL
+        value: text-embedding-3-small
+      - key: RATE_LIMIT_PER_SESSION_PER_HOUR
+        value: "20"
+      - key: DAILY_SPEND_CAP_USD
+        value: "2.00"
+      - key: DATABASE_URL
+        value: sqlite:////app/state/fleetpolicy.db
+      - key: CHROMA_DIR
+        value: /app/state/chroma
+      - key: LANGSMITH_TRACING
+        value: "false"
+    disk:
+      name: fleetpolicy-state
+      mountPath: /app/state
+      sizeGB: 1
