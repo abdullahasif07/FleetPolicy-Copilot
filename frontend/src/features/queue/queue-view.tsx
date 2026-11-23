@@ -20,6 +20,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useHotkeys } from "@/hooks/use-hotkeys";
+import { NewRequestDialog, ResetDemoButton } from "./demo-actions";
 import { age, money } from "@/lib/format";
 import type { RequestSummary } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -126,10 +127,16 @@ export function QueueView() {
             Review each request against the client&apos;s fleet policy. The AI recommends; you decide.
           </p>
         </div>
-        <p className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
-          <Kbd>J</Kbd>
-          <Kbd>K</Kbd> move · <Kbd>Enter</Kbd> open · <Kbd>/</Kbd> search
-        </p>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-1">
+            <ResetDemoButton />
+            <NewRequestDialog />
+          </div>
+          <p className="hidden items-center gap-1.5 text-xs text-muted-foreground md:flex">
+            <Kbd>J</Kbd>
+            <Kbd>K</Kbd> move · <Kbd>Enter</Kbd> open · <Kbd>/</Kbd> search
+          </p>
+        </div>
       </div>
 
       <div className="mt-5 flex flex-wrap items-center gap-2">

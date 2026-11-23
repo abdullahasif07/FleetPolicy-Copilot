@@ -1,4 +1,11 @@
-import type { AnalysisResult, Decision, DecisionOut, StepEvent } from "./types";
+import type {
+  AnalysisResult,
+  Decision,
+  DecisionOut,
+  LineItem,
+  RequestSummary,
+  StepEvent,
+} from "./types";
 
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(
   /\/$/,
@@ -69,6 +76,24 @@ export function recordDecision(id: string, action: Decision, overrideReason?: st
     method: "POST",
     body: JSON.stringify({ action, override_reason: overrideReason || null }),
   });
+}
+
+export interface NewRequest {
+  client_id: string;
+  vehicle_id: string;
+  shop_id: string;
+  odometer: number | null;
+  quotes_count: number | null;
+  line_items: LineItem[];
+  shop_notes: string;
+}
+
+export function createRequest(body: NewRequest) {
+  return request<RequestSummary>("/requests", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function resetDemo() {
+  return request<{ status: string }>("/demo/reset", { method: "POST" });
 }
 
 export type AnalysisEvent =
