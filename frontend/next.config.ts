@@ -19,6 +19,7 @@ function apiUrlFromRootEnv(): string | undefined {
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? apiUrlFromRootEnv() ?? "http://localhost:8000";
 
 const nextConfig: NextConfig = {
+  output: "standalone", // self-contained server for the Docker image (Vercel ignores it)
   cacheComponents: true,
   partialPrefetching: true,
   env: { NEXT_PUBLIC_API_URL: apiUrl },

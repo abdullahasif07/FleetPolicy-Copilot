@@ -1,0 +1,33 @@
+# Local run of the whole stack:  docker compose up --build
+#   Web → http://localhost:3000    API → http://localhost:8001/docs
+# Reads OPENAI_API_KEY (and other settings) from .env at the repo root.
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file: .env
+    environment:
+      CORS_ORIGIN: http://localhost:3000
+      DATABASE_URL: sqlite:////app/state/fleetpolicy.db
+      CHROMA_DIR: /app/state/chroma
+    ports:
+      - "8001:8000"
+    volumes:
+      - api-state:/app/state
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8001
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  api-state:

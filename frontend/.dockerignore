@@ -1,0 +1,15 @@
+# Never send secrets or local state into an image build
+.env
+.env.*
+!.env.example
+.git
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+**/node_modules
+**/.next
+backend/.chroma
+**/*.db
+**/.DS_Store
