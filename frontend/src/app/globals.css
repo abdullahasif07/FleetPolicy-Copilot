@@ -30,6 +30,9 @@
   --color-escalate-soft: var(--escalate-soft);
   --color-decline: var(--decline);
   --color-decline-soft: var(--decline-soft);
+  --color-chart-approve: var(--chart-approve);
+  --color-chart-escalate: var(--chart-escalate);
+  --color-chart-decline: var(--chart-decline);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
@@ -79,6 +82,10 @@
   --escalate-soft: oklch(0.962 0.059 95.617);
   --decline: oklch(0.505 0.213 27.518);
   --decline-soft: oklch(0.936 0.032 17.717);
+  /* Chart fills: validated for colour-blind separation (dataviz validator, light surface) */
+  --chart-approve: #107823;
+  --chart-escalate: #d98b09;
+  --chart-decline: #b32035;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -120,6 +127,9 @@
   --escalate-soft: oklch(0.279 0.077 45.635);
   --decline: oklch(0.704 0.191 22.216);
   --decline-soft: oklch(0.258 0.092 26.042);
+  --chart-approve: #24a965;
+  --chart-escalate: #d0750a;
+  --chart-decline: #c53443;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

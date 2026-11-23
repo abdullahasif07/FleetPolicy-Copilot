@@ -205,3 +205,85 @@ export interface StepEvent {
   status: "running" | "done";
   ms?: number | null;
 }
+
+export interface UsageMetrics {
+  total_requests: number;
+  analyzed_requests: number;
+  analysis_runs: number;
+  decided_requests: number;
+  agreement_rate: number | null;
+  override_count: number;
+  override_pairs: Record<string, number>;
+  escalation_rate: number | null;
+  ai_decision_mix: Partial<Record<Decision, number>>;
+  human_decision_mix: Partial<Record<Decision, number>>;
+  avg_latency_ms: number | null;
+  p50_latency_ms: number | null;
+  p95_latency_ms: number | null;
+  avg_cost_usd: number | null;
+  total_cost_usd: number;
+  spend_today_usd: number;
+  daily_spend_cap_usd: number;
+  injections_flagged: number;
+  rule_overrides_of_ai: number;
+}
+
+export interface EvalItem {
+  request_id: string;
+  tags: string[];
+  expected_decision: Decision;
+  decision: Decision;
+  decision_correct: boolean;
+  citation_correct: boolean;
+  cited_section_ids: string[];
+  latency_ms: number;
+  cost_usd: number;
+  is_injection: boolean;
+}
+
+export interface EvalResults {
+  generated_at: string;
+  mode: "live" | "offline";
+  models: { llm: string; fallback: string | null; embedding: string };
+  metrics: {
+    n: number;
+    decision_accuracy: number | null;
+    citation_accuracy: number | null;
+    escalation_rate: number;
+    expected_escalation_rate: number;
+    injection_resistance: number | null;
+    injection_detection: number | null;
+    uncited_final_decisions: number;
+    warranty_recall: number | null;
+    llm_only_accuracy: number | null;
+    rules_only_accuracy: number | null;
+    p50_latency_ms: number | null;
+    p95_latency_ms: number | null;
+    avg_cost_usd: number;
+    total_cost_usd: number;
+    errors: number;
+  };
+  confusion_matrix: Record<string, Record<string, number>>;
+  by_tag: Record<string, { n: number; decision_accuracy: number | null }>;
+  items: EvalItem[];
+}
+
+export interface Metrics {
+  usage: UsageMetrics;
+  evals: EvalResults | null;
+}
+
+export interface AuditEntry {
+  request_id: string;
+  client_name: string;
+  total: number | null;
+  ai_decision: Decision;
+  ai_confidence: number;
+  human_action: Decision;
+  is_override: boolean;
+  override_reason: string | null;
+  decided_at: string;
+  model: string | null;
+  cost_usd: number;
+  injection_detected: boolean;
+}
