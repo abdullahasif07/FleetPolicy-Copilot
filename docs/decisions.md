@@ -131,3 +131,28 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
 - **Overrides.** Choosing the AI's recommendation records the decision immediately. Any
   other choice opens a dialog that requires a reason (at least 5 characters). After a
   decision, a "Next request" button moves to the next open item.
+
+## Insights, packaging and deployment (M5)
+- **Charts are plain HTML and CSS, with no chart library.** The forms were picked by the
+  job each one does: stat tiles for headline numbers, meter bars for ratios against a
+  target, segmented bars for the AI vs human decision mix, a histogram for latency, and a
+  heat table for the confusion matrix. Every chart has hover/focus tooltips and either a
+  table view or visible figures.
+- **Chart fills use their own colour tokens** (`--chart-approve`, `--chart-escalate`,
+  `--chart-decline`), checked with the dataviz palette validator for colour-blind
+  separation in both themes. The UI's green, amber and red text colours failed that check
+  in chart form (escalate and decline were too close), so they stay for badges, which
+  always pair colour with an icon and a label.
+- **The "New request" form and the "Reset demo" button** live on the queue page for live
+  demos. Reset clears requests, analyses and decisions but keeps the daily spend record.
+- **Docker.** The backend image builds from the repo root because it needs `data/` and
+  `evals/`. Writable state (SQLite and Chroma) lives in `/app/state` on a volume, and the
+  container runs as a non-root user. The frontend uses Next's standalone output.
+  `NEXT_PUBLIC_API_URL` is baked into the bundle at build time, so the compose file passes
+  it as a build arg.
+- **Render's persistent disk.** If the mounted disk isn't writable by the image's non-root
+  user (uid 10001), either change the disk's ownership or drop the `USER app` line for that
+  deployment.
+- **Docker images couldn't be built here** because the Docker daemon wasn't running. The
+  compose file was validated (`docker compose config`), the Next standalone server was
+  built and smoke-tested locally, and CI builds both images.
