@@ -184,3 +184,19 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
 - **Without an API key**, drafting returns a 503 and the reviewer can fill in the form by
   hand (`POST /onboarding/parse` reads the sections without the AI). Drafting counts
   towards the rate limit and the daily spend cap (about $0.002 per draft with gpt-4.1-mini).
+
+## What would change the decision
+- **Plain code, not the model.** For each finding that stops an approval, the request is
+  changed just enough to clear it (lower the total to the limit, switch to an approved
+  shop, add the required quotes, cap the labour rate, wait for the service interval,
+  remove an excluded line), and the rule engine is re-run. The UI shows the resulting
+  rule outcome for each change on its own and, when there are several, for all of them
+  together. The AI's judgement isn't re-run, and the panel says so.
+- **Some findings can't be changed away.** Pre-approval and specialist-review rules are
+  shown as "no change to the request avoids this". Removing the only line on a request
+  (excluded work, or work covered by warranty) says that nothing would be left to bill,
+  rather than claiming an Approve.
+- **Computed when the request is opened** (`what_if` in `GET /requests/{id}`), not stored
+  with the analysis. It's cheap and deterministic, and it works for analyses saved earlier.
+- **Totals are scaled down evenly and rounded down**, so the changed total never ends up a
+  cent over the limit.
