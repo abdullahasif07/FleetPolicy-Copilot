@@ -12,6 +12,7 @@ from app.data_loader import is_builtin_client
 from app.models.domain import ClientPolicy, Decision, LineItem, RepairRequest, Shop, Vehicle
 from app.onboarding.checks import Issue
 from app.onboarding.drafter import MAX_POLICY_CHARS
+from app.rules.counterfactual import WhatIfResult
 
 
 class RequestSummary(BaseModel):
@@ -112,6 +113,7 @@ class RequestDetail(BaseModel):
     injection_signals: list[str]
     analysis: AnalysisResult | None
     decision: DecisionOut | None
+    what_if: WhatIfResult  # deterministic: what would change the rule checks' outcome
 
 
 class DecisionIn(BaseModel):

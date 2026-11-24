@@ -43,6 +43,7 @@ from app.api.views import (
 from app.container import Container
 from app.data_loader import (
     load_onboarding_sample,
+    load_parts,
     load_policies,
     load_policy_text,
     load_shops,
@@ -64,6 +65,7 @@ from app.onboarding.checks import Issue, check_policy, has_errors
 from app.onboarding.drafter import DraftOut, OnboardingError, draft_policy, parse_policy_document
 from app.onboarding.fleet import SAMPLE_CSV, parse_vehicles
 from app.retrieval.chunker import PolicyChunk, chunk_policy
+from app.rules.counterfactual import what_would_change
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -139,6 +141,8 @@ def get_request(request_id: str, session: DB) -> RequestDetail:
         injection_signals=detect_injection(req.shop_notes),
         analysis=analysis_out(analysis),
         decision=decision_out(decision),
+        what_if=what_would_change(req, vehicle, policy, load_parts(),
+                                  {sid: s.name for sid, s in shops.items()}),
     )
 
 
