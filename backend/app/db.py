@@ -1,4 +1,5 @@
-"""SQLite persistence (SQLModel): requests, analyses, human decisions and daily usage."""
+"""SQLite persistence (SQLModel): requests, analyses, human decisions, daily usage and
+clients onboarded through the UI."""
 
 from __future__ import annotations
 
@@ -9,7 +10,13 @@ from sqlalchemy import JSON, Column
 from sqlalchemy.engine import Engine
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 
-from app.data_loader import load_sample_requests
+from app.data_loader import (
+    load_sample_requests,
+    register_client,
+    registered_client_ids,
+    unregister_client,
+)
+from app.models.domain import ClientPolicy, Vehicle
 
 
 def utcnow() -> datetime:
@@ -71,6 +78,22 @@ class UsageRow(SQLModel, table=True):
     analyses: int = 0
 
 
+class OnboardedClientRow(SQLModel, table=True):
+    __tablename__ = "onboarded_clients"
+
+    client_id: str = Field(primary_key=True)
+    created_at: datetime = Field(default_factory=utcnow)
+    policy_markdown: str
+    policy: dict[str, Any] = Field(sa_column=Column(JSON, nullable=False))
+    vehicles: list[dict[str, Any]] = Field(sa_column=Column(JSON, nullable=False))
+
+    def register(self) -> tuple[ClientPolicy, list[Vehicle]]:
+        policy = ClientPolicy.model_validate(self.policy)
+        vehicles = [Vehicle.model_validate(v) for v in self.vehicles]
+        register_client(policy, self.policy_markdown, vehicles)
+        return policy, vehicles
+
+
 def make_engine(url: str) -> Engine:
     connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
     return create_engine(url, connect_args=connect_args)
@@ -106,13 +129,20 @@ def init_db(engine: Engine) -> None:
     with Session(engine) as session:
         if session.exec(select(RequestRow).limit(1)).first() is None:
             seed_requests(session)
+        for row in session.exec(select(OnboardedClientRow)).all():
+            row.register()
 
 
-def reset_demo(engine: Engine) -> None:
-    """Drop requests, analyses and decisions, then re-seed. Usage is kept for the spend cap."""
+def reset_demo(engine: Engine) -> list[str]:
+    """Back to the original demo: drop requests, analyses, decisions and onboarded clients,
+    then re-seed. Usage is kept so the spend cap still holds. Returns removed client IDs."""
     with Session(engine) as session:
-        for model in (DecisionRow, AnalysisRow, RequestRow):  # usage kept: spend cap holds
+        for model in (DecisionRow, AnalysisRow, RequestRow, OnboardedClientRow):
             for row in session.exec(select(model)).all():
                 session.delete(row)
         session.commit()
+    removed = registered_client_ids()
+    for client_id in removed:
+        unregister_client(client_id)
     init_db(engine)
+    return removed

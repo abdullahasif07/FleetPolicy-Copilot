@@ -21,11 +21,14 @@ from app.agent.schemas import AnalysisResult
 from app.api.deps import get_container, get_db, session_id
 from app.api.schemas import (
     AuditEntry,
+    CheckOut,
     ClientInfo,
     DecisionIn,
     DecisionOut,
+    DraftIn,
     Metrics,
     NewRequestIn,
+    OnboardIn,
     RequestDetail,
     RequestSummary,
 )
@@ -38,12 +41,29 @@ from app.api.views import (
     warranty_status,
 )
 from app.container import Container
-from app.data_loader import load_policies, load_policy_text, load_shops, load_vehicles
-from app.db import AnalysisRow, DecisionRow, RequestRow, UsageRow, request_to_row, reset_demo
+from app.data_loader import (
+    load_onboarding_sample,
+    load_policies,
+    load_policy_text,
+    load_shops,
+    load_vehicles,
+)
+from app.db import (
+    AnalysisRow,
+    DecisionRow,
+    OnboardedClientRow,
+    RequestRow,
+    UsageRow,
+    request_to_row,
+    reset_demo,
+)
 from app.guardrails.limits import LimitExceededError, check_spend_cap, record_usage, today
 from app.logging_setup import log
-from app.models.domain import Decision, RepairRequest, Shop, Vehicle
-from app.retrieval.chunker import chunk_policy
+from app.models.domain import ClientPolicy, Decision, RepairRequest, Shop, Vehicle
+from app.onboarding.checks import Issue, check_policy, has_errors
+from app.onboarding.drafter import DraftOut, OnboardingError, draft_policy, parse_policy_document
+from app.onboarding.fleet import SAMPLE_CSV, parse_vehicles
+from app.retrieval.chunker import PolicyChunk, chunk_policy
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -51,6 +71,18 @@ router = APIRouter()
 DB = Annotated[Session, Depends(get_db)]
 C = Annotated[Container, Depends(get_container)]
 Status = Literal["pending", "analyzed", "decided"]
+
+
+def _limits(container: Container, sid: str) -> JSONResponse | None:
+    """Spend cap + per-session rate limit for anything that calls the LLM."""
+    try:
+        check_spend_cap(container.engine, container.settings.daily_spend_cap_usd)
+        container.rate_limiter.check(sid)
+    except LimitExceededError as e:
+        headers = {"Retry-After": str(e.retry_after_s)} if e.retry_after_s else None
+        return JSONResponse({"code": e.code, "message": e.message}, status_code=429,
+                            headers=headers)
+    return None
 
 
 def _get_row(session: Session, request_id: str) -> RequestRow:
@@ -169,13 +201,8 @@ async def analyze(
     row = _get_row(session, request_id)
     payload = dict(row.payload)
     sid = session_id(request)
-    try:
-        check_spend_cap(container.engine, container.settings.daily_spend_cap_usd)
-        container.rate_limiter.check(sid)
-    except LimitExceededError as e:
-        headers = {"Retry-After": str(e.retry_after_s)} if e.retry_after_s else None
-        return JSONResponse({"code": e.code, "message": e.message}, status_code=429,
-                            headers=headers)
+    if (limited := _limits(container, sid)) is not None:
+        return limited
     try:
         deps = container.agent_deps()
     except LLMUnavailableError as e:
@@ -357,5 +384,104 @@ def health(container: C) -> dict[str, Any]:
 
 @router.post("/demo/reset")
 def demo_reset(container: C) -> dict[str, str]:
-    reset_demo(container.engine)
+    container.unindex_clients(reset_demo(container.engine))
     return {"status": "reset"}
+
+
+# --- Client onboarding ------------------------------------------------------------------
+
+
+def _error(status: int, code: str, message: str, **extra: Any) -> JSONResponse:
+    return JSONResponse({"code": code, "message": message, **extra}, status_code=status)
+
+
+@router.get("/onboarding/sample")
+def onboarding_sample() -> dict[str, str]:
+    """A fictional policy and vehicle list to try onboarding with."""
+    return {"policy_markdown": load_onboarding_sample(), "vehicles_csv": SAMPLE_CSV}
+
+
+@router.post("/onboarding/parse", response_model=None)
+def onboarding_parse(body: DraftIn) -> JSONResponse | dict[str, Any]:
+    """Read the client ID and sections without the AI (for filling the form by hand)."""
+    try:
+        client_id, chunks = parse_policy_document(body.policy_markdown)
+    except OnboardingError as e:
+        return _error(422, "invalid_policy", str(e))
+    if client_id in load_policies():
+        return _error(422, "invalid_policy", f"A client with ID {client_id} already exists.")
+    return {"client_id": client_id, "sections": [c.model_dump() for c in chunks]}
+
+
+@router.post("/onboarding/draft", response_model=DraftOut)
+async def onboarding_draft(body: DraftIn, request: Request,
+                           container: C) -> DraftOut | JSONResponse:
+    """Have the AI propose structured settings from a policy document (nothing is saved)."""
+    try:
+        parse_policy_document(body.policy_markdown)
+    except OnboardingError as e:
+        return _error(422, "invalid_policy", str(e))
+    if (limited := _limits(container, session_id(request))) is not None:
+        return limited
+    try:
+        out = await draft_policy(container.drafter(), body.policy_markdown, load_shops(),
+                                 set(load_policies()))
+    except OnboardingError as e:
+        return _error(422, "invalid_policy", str(e))
+    except LLMUnavailableError as e:
+        return _error(503, "llm_unavailable",
+                      f"AI drafting is unavailable ({e}). You can still fill in the form.")
+    record_usage(container.engine, out.cost_usd)
+    log(logger, logging.INFO, "onboarding_drafted", client_id=out.client_id, model=out.model,
+        issues=len(out.issues), cost_usd=out.cost_usd)
+    return out
+
+
+def _check(body: OnboardIn) -> tuple[list[Issue], list[PolicyChunk], list[Vehicle]]:
+    try:
+        client_id, chunks = parse_policy_document(body.policy_markdown)
+    except OnboardingError as e:
+        return [Issue(field="policy_markdown", level="error", message=str(e))], [], []
+    issues = check_policy(body.policy, chunks, load_shops(), set(load_policies()))
+    if body.policy.client_id != client_id:
+        issues.insert(0, Issue(field="client_id", level="error",
+                               message=f"The policy's sections use {client_id}, not "
+                                       f"{body.policy.client_id}."))
+    vehicles: list[Vehicle] = []
+    try:
+        vehicles = parse_vehicles(client_id, body.vehicles_csv)
+    except OnboardingError as e:
+        issues.append(Issue(field="vehicles", level="error", message=str(e)))
+    return issues, chunks, vehicles
+
+
+@router.post("/onboarding/check", response_model=CheckOut)
+def onboarding_check(body: OnboardIn) -> CheckOut:
+    """Re-run the deterministic checks while the reviewer edits the draft."""
+    issues, chunks, vehicles = _check(body)
+    return CheckOut(client_id=chunks[0].client_id if chunks else None, issues=issues,
+                    vehicle_count=len(vehicles))
+
+
+@router.post("/clients", response_model=ClientInfo, status_code=201)
+def create_client(body: OnboardIn, session: DB, container: C) -> ClientInfo | JSONResponse:
+    """Save a reviewed client: settings, policy text (indexed for search) and vehicles."""
+    issues, chunks, vehicles = _check(body)
+    if has_errors(issues):
+        return _error(422, "invalid_client", "Fix the highlighted problems before saving.",
+                      issues=[i.model_dump() for i in issues])
+    policy = ClientPolicy.model_validate(
+        body.policy.model_dump() | {"policy_file": f"onboarded:{body.policy.client_id}"})
+    try:
+        container.index_client(policy.client_id, chunks)
+    except LLMUnavailableError as e:
+        return _error(503, "llm_unavailable", f"Couldn't index the policy for search ({e}).")
+    row = OnboardedClientRow(client_id=policy.client_id, policy_markdown=body.policy_markdown,
+                             policy=policy.model_dump(mode="json"),
+                             vehicles=[v.model_dump(mode="json") for v in vehicles])
+    session.add(row)
+    session.commit()
+    row.register()
+    log(logger, logging.INFO, "client_onboarded", client_id=policy.client_id,
+        sections=len(chunks), vehicles=len(vehicles))
+    return ClientInfo.from_policy(policy, load_shops())

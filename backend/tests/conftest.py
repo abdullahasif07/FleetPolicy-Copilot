@@ -80,7 +80,10 @@ def rec(decision: Decision, reasons: list[tuple[str, str]] | None = None,
 
 def section_sentence(section_id: str, index: int = 0) -> str:
     from app.retrieval.chunker import split_sentences
+    from app.retrieval.index import current_index
     chunk = hash_index().get_section(section_id)
+    if chunk is None and (live := current_index()) is not None:  # e.g. onboarded clients
+        chunk = live.get_section(section_id)
     assert chunk is not None
     return split_sentences(chunk.text)[index]
 

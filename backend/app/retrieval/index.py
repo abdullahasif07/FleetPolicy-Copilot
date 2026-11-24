@@ -52,9 +52,7 @@ class PolicyIndex:
         self._by_section = {c.section_id: c for c in chunks}
         self._bm25: dict[str, tuple[BM25Okapi, list[PolicyChunk]]] = {}
         for cid in {c.client_id for c in chunks}:
-            client_chunks = [c for c in chunks if c.client_id == cid]
-            self._bm25[cid] = (BM25Okapi([tokenize(c.embed_text) for c in client_chunks]),
-                               client_chunks)
+            self._build_bm25(cid)
 
         digest = hashlib.sha256(
             ("|".join(c.embed_text for c in chunks) + embedder.model).encode()
@@ -65,15 +63,41 @@ class PolicyIndex:
             metadata={"hnsw:space": "cosine"},
         )
         if self._collection.count() != len(chunks):
-            vectors, tokens = embedder.embed([c.embed_text for c in chunks])
-            self.embedding_tokens += tokens
-            self._collection.upsert(
-                ids=[c.chunk_id for c in chunks],
-                embeddings=vectors,  # type: ignore[arg-type]
-                documents=[c.text for c in chunks],
-                metadatas=[{"client_id": c.client_id, "section_id": c.section_id}
-                           for c in chunks],
-            )
+            self._upsert(chunks)
+
+    def _build_bm25(self, client_id: str) -> None:
+        client_chunks = [c for c in self._chunks.values() if c.client_id == client_id]
+        self._bm25[client_id] = (BM25Okapi([tokenize(c.embed_text) for c in client_chunks]),
+                                 client_chunks)
+
+    def _upsert(self, chunks: list[PolicyChunk]) -> None:
+        vectors, tokens = self.embedder.embed([c.embed_text for c in chunks])
+        self.embedding_tokens += tokens
+        self._collection.upsert(
+            ids=[c.chunk_id for c in chunks],
+            embeddings=vectors,  # type: ignore[arg-type]
+            documents=[c.text for c in chunks],
+            metadatas=[{"client_id": c.client_id, "section_id": c.section_id}
+                       for c in chunks],
+        )
+
+    def add_client(self, client_id: str, chunks: list[PolicyChunk]) -> None:
+        """Index a newly onboarded client's policy (replacing any previous version)."""
+        self.remove_client(client_id)
+        self._upsert(chunks)
+        for c in chunks:
+            self._chunks[c.chunk_id] = c
+            self._by_section[c.section_id] = c
+        self._build_bm25(client_id)
+
+    def remove_client(self, client_id: str) -> None:
+        old = [c for c in self._chunks.values() if c.client_id == client_id]
+        if old:
+            self._collection.delete(ids=[c.chunk_id for c in old])
+        for c in old:
+            del self._chunks[c.chunk_id]
+            self._by_section.pop(c.section_id, None)
+        self._bm25.pop(client_id, None)
 
     def get_section(self, section_id: str) -> PolicyChunk | None:
         return self._by_section.get(section_id)
@@ -125,3 +149,8 @@ def get_policy_index(embedder: Embedder, chroma_dir: Path | None) -> PolicyIndex
                       if chroma_dir else chromadb.EphemeralClient(settings=settings))
             _index = PolicyIndex(embedder, client, load_all_chunks())
         return _index
+
+
+def current_index() -> PolicyIndex | None:
+    """The process-wide index if it has been built (used to add onboarded clients)."""
+    return _index

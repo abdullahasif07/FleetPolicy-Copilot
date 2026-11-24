@@ -8,7 +8,10 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.agent.schemas import AnalysisResult
+from app.data_loader import is_builtin_client
 from app.models.domain import ClientPolicy, Decision, LineItem, RepairRequest, Shop, Vehicle
+from app.onboarding.checks import Issue
+from app.onboarding.drafter import MAX_POLICY_CHARS
 
 
 class RequestSummary(BaseModel):
@@ -55,6 +58,7 @@ class ClientInfo(BaseModel):
     always_escalate_categories: list[str]
     excluded_categories: list[str]
     pm_interval_miles: int | None
+    onboarded: bool = False
 
     @classmethod
     def from_policy(cls, p: ClientPolicy, shops: dict[str, Shop]) -> ClientInfo:
@@ -69,7 +73,24 @@ class ClientInfo(BaseModel):
             always_escalate_categories=[str(c) for c in p.always_escalate_categories],
             excluded_categories=[str(c) for c in p.excluded_categories],
             pm_interval_miles=p.pm_interval_miles,
+            onboarded=not is_builtin_client(p.client_id),
         )
+
+
+class DraftIn(BaseModel):
+    policy_markdown: str = Field(min_length=1, max_length=MAX_POLICY_CHARS)
+
+
+class OnboardIn(BaseModel):
+    policy_markdown: str = Field(min_length=1, max_length=MAX_POLICY_CHARS)
+    policy: ClientPolicy
+    vehicles_csv: str = Field(max_length=20_000)
+
+
+class CheckOut(BaseModel):
+    client_id: str | None
+    issues: list[Issue]
+    vehicle_count: int
 
 
 class DecisionOut(BaseModel):
