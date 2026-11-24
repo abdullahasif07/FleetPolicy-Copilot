@@ -68,3 +68,9 @@ export function normalizeForMatch(s: string): string {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+export const CATEGORIES = [
+  "brakes", "tires", "steering", "suspension", "engine", "transmission", "electrical", "hvac",
+  "battery_12v", "battery_hv", "electric_drive", "preventive_maintenance", "body", "glass",
+  "reefer", "aerial_hydraulics", "accessories", "cosmetic", "diagnostic", "other",
+];

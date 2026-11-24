@@ -89,6 +89,60 @@ export interface ClientInfo {
   always_escalate_categories: string[];
   excluded_categories: string[];
   pm_interval_miles: number | null;
+  onboarded: boolean;
+}
+
+export type RuleAction = "block" | "escalate";
+
+/** Full structured settings for a client (what the rule engine checks). */
+export interface ClientPolicy {
+  client_id: string;
+  name: string;
+  policy_file: string;
+  summary: string;
+  auto_approve_limit: number;
+  category_limits: Record<string, number>;
+  quote_threshold: number | null;
+  quotes_required: number;
+  limit_with_quotes: number | null;
+  approved_vendors: string[];
+  non_approved_vendor_action: RuleAction;
+  labor_rate_cap: number;
+  labor_cap_action: RuleAction;
+  pre_approval_categories: string[];
+  always_escalate_categories: string[];
+  excluded_categories: string[];
+  pm_interval_miles: number | null;
+  pm_min_miles: number | null;
+  parts_markup_review_pct: number | null;
+  sections: Record<string, string>;
+}
+
+export interface Issue {
+  field: string;
+  level: "error" | "warning";
+  message: string;
+}
+
+export interface ParsedPolicy {
+  client_id: string;
+  sections: PolicyChunk[];
+}
+
+export interface PolicyDraft extends ParsedPolicy {
+  policy: ClientPolicy;
+  notes: string[];
+  issues: Issue[];
+  model: string;
+  tokens_in: number;
+  tokens_out: number;
+  cost_usd: number;
+}
+
+export interface OnboardCheck {
+  client_id: string | null;
+  issues: Issue[];
+  vehicle_count: number;
 }
 
 export interface RuleFlag {

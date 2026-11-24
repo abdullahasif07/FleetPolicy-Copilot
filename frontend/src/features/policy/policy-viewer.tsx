@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
+import { Plus } from "lucide-react";
 import { ErrorState } from "@/components/states";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ClientInfo, PolicyDoc } from "@/lib/types";
@@ -34,9 +35,20 @@ export function PolicyViewer({ clientId }: { clientId: string }) {
               )}
             >
               {c.name}
+              {c.onboarded && (
+                <span className="ml-1.5 rounded bg-primary/10 px-1 py-px text-[10px] font-medium text-primary">
+                  New
+                </span>
+              )}
             </Link>
           )) ??
             Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+          <Link
+            href="/clients/new"
+            className="flex items-center gap-1.5 rounded-md border border-dashed px-2.5 py-1.5 text-sm whitespace-nowrap text-muted-foreground hover:border-primary/50 hover:text-foreground lg:mt-2"
+          >
+            <Plus className="size-3.5" aria-hidden /> Onboard a client
+          </Link>
         </nav>
         {doc.data && (
           <>
@@ -79,7 +91,11 @@ export function PolicyViewer({ clientId }: { clientId: string }) {
         ) : (
           <>
             <header className="mb-6 px-4">
-              <p className="text-xs text-muted-foreground">Fleet maintenance policy · fictional</p>
+              <p className="text-xs text-muted-foreground">
+                Fleet maintenance policy · fictional
+                {clients.data?.find((c) => c.client_id === clientId)?.onboarded &&
+                  " · onboarded in this demo"}
+              </p>
               <h1 className="text-xl font-semibold tracking-tight">{doc.data.name}</h1>
               {clients.data && (
                 <p className="mt-1 text-sm text-muted-foreground">

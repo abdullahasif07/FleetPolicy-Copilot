@@ -26,14 +26,8 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { createRequest, resetDemo } from "@/lib/api";
-import { categoryLabel, money } from "@/lib/format";
+import { CATEGORIES, categoryLabel, money } from "@/lib/format";
 import type { ClientInfo, Shop, Vehicle } from "@/lib/types";
-
-const CATEGORIES = [
-  "brakes", "tires", "steering", "suspension", "engine", "transmission", "electrical", "hvac",
-  "battery_12v", "battery_hv", "electric_drive", "preventive_maintenance", "body", "glass",
-  "reefer", "aerial_hydraulics", "accessories", "cosmetic", "diagnostic", "other",
-];
 
 interface ItemDraft {
   description: string;

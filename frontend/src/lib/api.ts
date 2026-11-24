@@ -1,8 +1,14 @@
 import type {
   AnalysisResult,
+  ClientInfo,
+  ClientPolicy,
   Decision,
   DecisionOut,
+  Issue,
   LineItem,
+  OnboardCheck,
+  ParsedPolicy,
+  PolicyDraft,
   RequestSummary,
   StepEvent,
 } from "./types";
@@ -17,6 +23,7 @@ export class ApiError extends Error {
     message: string,
     public status: number,
     public code?: string,
+    public issues?: Issue[],
   ) {
     super(message);
     this.name = "ApiError";
@@ -46,16 +53,18 @@ function headers(extra?: HeadersInit): HeadersInit {
 async function toError(res: Response): Promise<ApiError> {
   let message = `Request failed (${res.status})`;
   let code: string | undefined;
+  let issues: Issue[] | undefined;
   try {
     const body = await res.json();
     if (typeof body.message === "string") message = body.message;
     else if (typeof body.detail === "string") message = body.detail;
     else if (Array.isArray(body.detail)) message = body.detail.map((d: { msg: string }) => d.msg).join("; ");
     code = body.code;
+    if (Array.isArray(body.issues)) issues = body.issues;
   } catch {
     /* non-JSON body */
   }
-  return new ApiError(message, res.status, code);
+  return new ApiError(message, res.status, code, issues);
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -90,6 +99,45 @@ export interface NewRequest {
 
 export function createRequest(body: NewRequest) {
   return request<RequestSummary>("/requests", { method: "POST", body: JSON.stringify(body) });
+}
+
+// --- Client onboarding ---------------------------------------------------------
+
+export interface OnboardBody {
+  policy_markdown: string;
+  policy: ClientPolicy;
+  vehicles_csv: string;
+}
+
+export function getOnboardingSample() {
+  return request<{ policy_markdown: string; vehicles_csv: string }>("/onboarding/sample");
+}
+
+export function parsePolicy(markdown: string) {
+  return request<ParsedPolicy>("/onboarding/parse", {
+    method: "POST",
+    body: JSON.stringify({ policy_markdown: markdown }),
+  });
+}
+
+export function draftPolicy(markdown: string, signal?: AbortSignal) {
+  return request<PolicyDraft>("/onboarding/draft", {
+    method: "POST",
+    body: JSON.stringify({ policy_markdown: markdown }),
+    signal,
+  });
+}
+
+export function checkClient(body: OnboardBody, signal?: AbortSignal) {
+  return request<OnboardCheck>("/onboarding/check", {
+    method: "POST",
+    body: JSON.stringify(body),
+    signal,
+  });
+}
+
+export function createClient(body: OnboardBody) {
+  return request<ClientInfo>("/clients", { method: "POST", body: JSON.stringify(body) });
 }
 
 export function resetDemo() {
