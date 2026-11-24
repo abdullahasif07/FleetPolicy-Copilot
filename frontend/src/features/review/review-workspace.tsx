@@ -201,6 +201,7 @@ export function ReviewWorkspace({ id }: { id: string }) {
               ) : analysis ? (
                 <RecommendationCard
                   analysis={analysis}
+                  whatIf={detail.what_if}
                   onOpenCitation={(sectionId, quote) => setCitation({ sectionId, quote })}
                   onReanalyze={analyze}
                   canReanalyze={!decision}

@@ -234,6 +234,23 @@ export interface RequestDetail {
   injection_signals: string[];
   analysis: AnalysisResult | null;
   decision: DecisionOut | null;
+  what_if: WhatIfResult;
+}
+
+/** One deterministic "what if": the rule checks re-run with a single change. */
+export interface WhatIf {
+  rule: string;
+  section_id: string;
+  change: string;
+  fixable: boolean;
+  decision_after: Decision | null;
+  note: string | null;
+}
+
+export interface WhatIfResult {
+  current_floor: Decision;
+  items: WhatIf[];
+  all_changes_floor: Decision | null;
 }
 
 export interface PolicyDoc {

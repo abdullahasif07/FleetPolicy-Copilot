@@ -1,11 +1,13 @@
 "use client";
 
 import {
+  ArrowRight,
   BadgeDollarSign,
   CheckCircle2,
   ChevronRight,
   CircleX,
   Info,
+  Lightbulb,
   Loader2,
   RotateCw,
   ShieldAlert,
@@ -15,7 +17,7 @@ import {
 import { DECISION_STYLES } from "@/components/decision";
 import { Button } from "@/components/ui/button";
 import { DECISION_LABEL, money, number } from "@/lib/format";
-import type { AnalysisResult, RuleFlag, Severity } from "@/lib/types";
+import type { AnalysisResult, Decision, RuleFlag, Severity, WhatIfResult } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 export const STEPS = [
@@ -154,13 +156,67 @@ function FlagRow({ flag, onOpen }: { flag: RuleFlag; onOpen: OpenCitation }) {
   );
 }
 
+function Outcome({ decision }: { decision: Decision }) {
+  const s = DECISION_STYLES[decision];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+        s.soft,
+        s.text,
+      )}
+    >
+      <ArrowRight className="size-3" aria-hidden />
+      {DECISION_LABEL[decision]}
+    </span>
+  );
+}
+
+function WhatWouldChange({ whatIf, onOpen }: { whatIf: WhatIfResult; onOpen: OpenCitation }) {
+  if (!whatIf.items.length) return null;
+  return (
+    <section aria-label="What would change this">
+      <h3 className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+        <Lightbulb className="size-3.5" aria-hidden /> What would change this
+      </h3>
+      <p className="mt-1 text-xs text-muted-foreground">
+        The rule checks re-run with one change at a time. The AI&apos;s judgement isn&apos;t re-run.
+      </p>
+      <ul className="mt-2 divide-y rounded-lg border">
+        {whatIf.items.map((w) => (
+          <li key={`${w.rule}-${w.change}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
+            <span className={cn("min-w-0 flex-1", !w.fixable && "text-muted-foreground")}>
+              {w.change}
+              {w.note && <span className="block text-xs text-muted-foreground">{w.note}</span>}
+            </span>
+            {w.decision_after ? (
+              <Outcome decision={w.decision_after} />
+            ) : (
+              !w.fixable && <span className="text-xs text-muted-foreground">No change</span>
+            )}
+            <SectionChip sectionId={w.section_id} onOpen={onOpen} />
+          </li>
+        ))}
+        {whatIf.all_changes_floor && (
+          <li className="flex items-center gap-3 bg-muted/40 px-3 py-2 text-sm font-medium">
+            <span className="flex-1">With all of these changes</span>
+            <Outcome decision={whatIf.all_changes_floor} />
+          </li>
+        )}
+      </ul>
+    </section>
+  );
+}
+
 export function RecommendationCard({
   analysis,
+  whatIf,
   onOpenCitation,
   onReanalyze,
   canReanalyze,
 }: {
   analysis: AnalysisResult;
+  whatIf?: WhatIfResult;
   onOpenCitation: OpenCitation;
   onReanalyze?: () => void;
   canReanalyze: boolean;
@@ -302,6 +358,8 @@ export function RecommendationCard({
           ))}
         </ul>
       </section>
+
+      {whatIf && <WhatWouldChange whatIf={whatIf} onOpen={onOpenCitation} />}
 
       <details className="group rounded-lg border px-3 py-2 text-xs">
         <summary className="cursor-pointer select-none text-muted-foreground marker:text-muted-foreground">
