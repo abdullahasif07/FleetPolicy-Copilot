@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import Any
 
 import openai
 
@@ -89,18 +90,19 @@ def test_detector_flags_all_labelled_injections_and_no_clean_notes() -> None:
 
 
 def test_openai_client_falls_back_to_second_model(monkeypatch: object) -> None:
-    from app.agent.llm import LLMResponse, OpenAILLM
+    from app.agent.llm import OpenAILLM, StructuredResponse
     from app.config import Settings
 
     llm = OpenAILLM(Settings(openai_api_key="sk-test-not-real", llm_max_retries=0,
                              _env_file=None))
     calls: list[str] = []
 
-    async def fake_call(model: str, messages: Messages) -> LLMResponse:
+    async def fake_call(model: str, messages: Messages, schema: object) -> StructuredResponse[Any]:
         calls.append(model)
         if model == "gpt-4.1-mini":
             raise openai.APITimeoutError(request=None)  # type: ignore[arg-type]
-        return LLMResponse(parsed=rec(Decision.ESCALATE), model=model, tokens_in=1, tokens_out=1)
+        return StructuredResponse(parsed=rec(Decision.ESCALATE), model=model, tokens_in=1,
+                                  tokens_out=1)
 
     llm._call = fake_call  # type: ignore[method-assign]
     out = asyncio.run(llm.recommend([]))

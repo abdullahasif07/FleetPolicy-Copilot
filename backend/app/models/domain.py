@@ -144,7 +144,7 @@ class ClientPolicy(BaseModel):
 
     client_id: str
     name: str
-    policy_file: str
+    policy_file: str = ""
     summary: str
     auto_approve_limit: float
     category_limits: dict[Category, float] = Field(default_factory=dict)

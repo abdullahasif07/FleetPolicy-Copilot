@@ -7,11 +7,11 @@ import logging
 import random
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 
 import openai
 from openai import AsyncOpenAI
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from app.agent.schemas import LLMRecommendation
 from app.config import Settings
@@ -20,11 +20,21 @@ from app.logging_setup import log
 logger = logging.getLogger(__name__)
 
 Messages = list[dict[str, str]]
+T = TypeVar("T", bound=BaseModel)
 
 
 @dataclass
 class LLMResponse:
     parsed: LLMRecommendation
+    model: str
+    tokens_in: int
+    tokens_out: int
+    fallback_used: bool = False
+
+
+@dataclass
+class StructuredResponse[M: BaseModel]:
+    parsed: M
     model: str
     tokens_in: int
     tokens_out: int
@@ -37,6 +47,12 @@ class LLMUnavailableError(RuntimeError):
 
 class LLMClient(Protocol):
     async def recommend(self, messages: Messages) -> LLMResponse: ...
+
+
+class StructuredLLM(Protocol):
+    """Any structured-output call (used by client onboarding to draft policy settings)."""
+
+    async def structured(self, messages: Messages, schema: type[T]) -> StructuredResponse[T]: ...
 
 
 _RETRYABLE = (
@@ -66,12 +82,13 @@ class OpenAILLM:
         self._timeout = settings.llm_timeout_seconds
         self._retries = settings.llm_max_retries
 
-    async def _call(self, model: str, messages: Messages) -> LLMResponse:
+    async def _call(self, model: str, messages: Messages,
+                    schema: type[T]) -> StructuredResponse[T]:
         resp = await asyncio.wait_for(
             self._client.chat.completions.parse(
                 model=model,
                 messages=messages,  # type: ignore[arg-type]
-                response_format=LLMRecommendation,
+                response_format=schema,
                 temperature=0,
             ),
             timeout=self._timeout,
@@ -80,16 +97,17 @@ class OpenAILLM:
         if msg.parsed is None:
             raise LLMUnavailableError(f"model returned no parsed output (refusal={msg.refusal!r})")
         usage = resp.usage
-        return LLMResponse(parsed=msg.parsed, model=model,
-                           tokens_in=usage.prompt_tokens if usage else 0,
-                           tokens_out=usage.completion_tokens if usage else 0)
+        return StructuredResponse(parsed=msg.parsed, model=model,
+                                  tokens_in=usage.prompt_tokens if usage else 0,
+                                  tokens_out=usage.completion_tokens if usage else 0)
 
-    async def recommend(self, messages: Messages) -> LLMResponse:
+    async def structured(self, messages: Messages, schema: type[T]) -> StructuredResponse[T]:
+        """Structured output with retries/backoff per model, then the fallback model."""
         last_error: Exception | None = None
         for i, model in enumerate(self._models):
             for attempt in range(self._retries + 1):
                 try:
-                    result = await self._call(model, messages)
+                    result = await self._call(model, messages, schema)
                     result.fallback_used = i > 0
                     return result
                 except openai.AuthenticationError as e:
@@ -107,6 +125,11 @@ class OpenAILLM:
                 error=type(last_error).__name__ if last_error else None)
         raise LLMUnavailableError(f"all models failed: {type(last_error).__name__}")
 
+    async def recommend(self, messages: Messages) -> LLMResponse:
+        r = await self.structured(messages, LLMRecommendation)
+        return LLMResponse(parsed=r.parsed, model=r.model, tokens_in=r.tokens_in,
+                           tokens_out=r.tokens_out, fallback_used=r.fallback_used)
+
 
 @dataclass
 class ScriptedLLM:
@@ -115,6 +138,7 @@ class ScriptedLLM:
     script: Callable[[Messages], LLMRecommendation]
     model: str = "scripted-fake"
     calls: list[Messages] = field(default_factory=list)
+    structured_script: Callable[[Messages], BaseModel] | None = None
 
     async def recommend(self, messages: Messages) -> LLMResponse:
         self.calls.append(messages)
@@ -122,10 +146,23 @@ class ScriptedLLM:
                            tokens_in=sum(len(m["content"]) // 4 for m in messages),
                            tokens_out=200)
 
+    async def structured(self, messages: Messages, schema: type[T]) -> StructuredResponse[T]:
+        self.calls.append(messages)
+        if self.structured_script is None:
+            raise LLMUnavailableError("no structured script configured")
+        parsed = self.structured_script(messages)
+        assert isinstance(parsed, schema)
+        return StructuredResponse(parsed=parsed, model=self.model,
+                                  tokens_in=sum(len(m["content"]) // 4 for m in messages),
+                                  tokens_out=400)
+
 
 def failing_llm(exc: Exception) -> Any:
     class _Failing:
         async def recommend(self, messages: Messages) -> LLMResponse:
+            raise exc
+
+        async def structured(self, messages: Messages, schema: type[T]) -> Any:
             raise exc
 
     return _Failing()
