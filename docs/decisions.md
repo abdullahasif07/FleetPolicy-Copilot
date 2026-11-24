@@ -156,3 +156,31 @@ Wherever the spec was ambiguous I chose the simpler option and recorded it here.
 - **Docker images couldn't be built here** because the Docker daemon wasn't running. The
   compose file was validated (`docker compose config`), the Next standalone server was
   built and smoke-tested locally, and CI builds both images.
+
+## Client onboarding
+- **The AI drafts, code checks, a person saves.** `POST /onboarding/draft` asks the model
+  for the settings as strict structured output, with a section ID for each setting and
+  notes for anything ambiguous. Nothing is stored at that point. `POST /onboarding/check`
+  re-runs the deterministic checks while the reviewer edits, and `POST /clients` runs them
+  again and refuses to save if any error remains.
+- **Numbers are checked against the cited text.** If a limit, rate, mileage or percentage
+  doesn't appear in the section it is mapped to, the field gets a warning (not an error),
+  because a policy can state a value in words. Missing required sections, unknown shops,
+  and contradictions such as a quote limit below the quote threshold are errors.
+- **Policies must use numbered section headings** (`### AB-2.1 Title`), the same format as
+  the built-in policies. The two-letter prefix becomes the client ID. This keeps citations
+  stable and verifiable. Parsing free-form PDFs was left out as a bigger, separate problem.
+- **Vehicles are pasted as CSV.** When the CSV has no warranty columns, typical terms are
+  used: 36 months / 36k miles basic, plus 60 months / 100k miles powertrain for combustion
+  vehicles or 96 months / 100k miles battery for EVs. Without vehicles a client can't
+  receive requests, so at least one is required.
+- **If the model leaves out "requests above the limit"**, it defaults to the approval-limit
+  section, with a note for the reviewer. Live runs showed the model often skips that key
+  because one section usually covers both.
+- **Storage.** Onboarded clients live in a SQLite table and are loaded into an in-process
+  registry at startup, so the rule engine, agent and API treat them like built-in clients.
+  Their sections are added to the live search index without a restart. Reset demo removes
+  them along with their requests.
+- **Without an API key**, drafting returns a 503 and the reviewer can fill in the form by
+  hand (`POST /onboarding/parse` reads the sections without the AI). Drafting counts
+  towards the rate limit and the daily spend cap (about $0.002 per draft with gpt-4.1-mini).

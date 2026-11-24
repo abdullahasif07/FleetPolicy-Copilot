@@ -4,6 +4,8 @@
 
 FleetPolicy Copilot is an AI assistant for fleet-maintenance teams. Repair shops send in repair requests, and someone has to decide whether each one is allowed under *that client's* fleet policy. The copilot finds the relevant policy clauses with hybrid search and checks hard limits in deterministic code. It then recommends **Approve, Escalate or Decline**, quoting the exact policy sentences it relied on. A person always makes the final decision: disagreeing with the AI takes one keypress and a short reason, and both are logged. Approvals or declines that the system can't back with a verified citation are escalated automatically. Prompt-injection attempts hidden in shop notes are flagged and ignored. On a labelled set of 40 requests, the live system reached **100% decision accuracy, 100% citation accuracy and 100% injection resistance** at about **$0.001 per request**.
 
+New clients can be **onboarded from their policy document**: the AI drafts the structured settings the rule engine needs (limits, approved vendors, excluded work) and links each one to the section that states it. Code checks every value against that section's text, and a person reviews and saves. The new client's policy is then searchable and usable straight away.
+
 The project covers RAG, multi-step agent orchestration, tool calls, guardrails, evaluation, observability, and a UI built for non-technical operations staff.
 
 ## Screenshots
@@ -97,6 +99,7 @@ The full log is in [docs/decisions.md](docs/decisions.md). The main ones:
 - **Graceful degradation.** Timeouts lead to retries with exponential backoff, then the fallback model, then a rules-only recommendation. The system never approves without the model's cited evidence.
 - **Retrieval is filtered by client.** Every search is filtered by `client_id`, so one client's policy can never be cited for another client's request.
 - **Operator-first UX.** The UI is a dense queue with keyboard navigation, a split-view workspace, `A`/`E`/`D` shortcuts, citations that open the policy with the sentence highlighted, and a required reason for overriding the AI.
+- **AI drafts, code checks, people approve (onboarding).** When a new client is onboarded, the model proposes settings from the policy text as structured output, citing a section for each. Deterministic checks then flag missing sections, impossible values and any number the cited section doesn't actually state. Nothing is saved until a reviewer fixes the errors and clicks Save.
 - **Cost and abuse controls.** A rate limit per session, a daily spend cap with a friendly message, CORS restricted to the frontend origin, JSON logs with request IDs, and secrets redacted from logs.
 
 ## Project structure
@@ -104,7 +107,8 @@ The full log is in [docs/decisions.md](docs/decisions.md). The main ones:
 ```
 backend/   FastAPI app, LangGraph agent, rule engine, retrieval, tests, eval script
 frontend/  Next.js 16 (App Router), TypeScript strict, Tailwind v4, shadcn/ui
-data/      Fictional policies (markdown), vehicles, rates, 40 requests, eval labels
+data/      Fictional policies (markdown), vehicles, rates, 40 requests, eval labels,
+           and a sample policy for trying client onboarding
 evals/     Latest eval results (read by the Insights page)
 docs/      Design decisions and architecture notes
 ```
@@ -118,7 +122,7 @@ docs/      Design decisions and architecture notes
 ## What I'd do next in production
 
 - **SSO and roles:** OIDC/SAML sign-in, with roles for associate, supervisor and admin. Decisions attributed to real users, and a supervisor queue for escalations.
-- **Real policy ingestion:** upload PDF or DOCX policies, parse them into sections with stable IDs, version them, and re-index on change. Each recommendation pinned to the policy version it used.
+- **Richer policy ingestion:** onboarding takes Markdown with numbered sections today. Next: PDF and DOCX upload with automatic sectioning, policy versions with re-indexing on change, and each recommendation pinned to the policy version it used.
 - **A feedback loop from human overrides:** treat override reasons as labelled data. Review them weekly to fix rules or clarify policies, grow the eval set from real disagreements, and alert when agreement drops.
 - **Better evaluation:** a held-out test set, adversarial injection variants, eval runs on every prompt or model change in CI, and an LLM-judge check that each quote actually supports its reason.
 - **Monitoring:** LangSmith or OpenTelemetry traces, dashboards for latency, cost, error, fallback and escalation rates, alerts on spend and drift, and Postgres plus a managed vector store instead of SQLite and local Chroma.
